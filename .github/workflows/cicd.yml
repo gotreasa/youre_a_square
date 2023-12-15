@@ -1,0 +1,191 @@
+name: CI/CD build pipeline with quality gate and coverage
+
+permissions:
+  security-events: write
+
+on: [push]
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@master
+
+  hadolint:
+    name: Verify dockerfile is linted
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - uses: hadolint/hadolint-action@master
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: 🐍 Set up Python "${{ matrix.python-version }}"
+      uses: actions/setup-python@v3
+      with:
+        python-version: "${{ matrix.python-version }}"
+
+    - name: 📌 Load files from cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-python-${{ matrix.python-version }}-pipenv-${{ hashFiles('Pipfile.lock') }}
+
+    - name: 👷‍ Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --deploy --dev
+
+    - name: 🕵️‍ PyLint
+      run: |
+        pipenv run linterCheck
+
+  snyk_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@main
+
+      - name: 🐍 Set up Python "${{ matrix.python-version }}"
+        uses: actions/setup-python@v3
+        with:
+          python-version: "${{ matrix.python-version }}"
+        
+      - name: 📌 Load files from cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/virtualenvs
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pipenv-${{ hashFiles('Pipfile.lock') }}
+  
+      - name: 👷‍ Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+          pipenv install --deploy --dev
+      - name: Test the dependencies for security vulnerabilities
+        uses: snyk/actions/python-3.10@master
+        env:
+          # In order to use the Snyk Action you will need to have a Snyk API token.
+          # More details in https://github.com/snyk/actions#getting-your-snyk-token
+          # or you can signup for free at https://snyk.io/login
+          SNYK_TOKEN: "${{ secrets.SNYK_TOKEN}}"
+        with:
+          command: test
+          args: --all-projects --sarif-file-output=snyk.sarif -d
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk.sarif
+      - name: Test the code for security vulnerabilities
+        uses: snyk/actions/python@master
+        continue-on-error: true # To make sure that SARIF upload gets called
+        env:
+          # In order to use the Snyk Action you will need to have a Snyk API token.
+          # More details in https://github.com/snyk/actions#getting-your-snyk-token
+          # or you can signup for free at https://snyk.io/login
+          SNYK_TOKEN: "${{ secrets.SNYK_TOKEN}}"
+        with:
+          command: code
+          args: test --sarif-file-output=snyk-code.sarif
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk-code.sarif
+
+
+  pact_tests:
+    runs-on: ubuntu-latest
+    needs: [lint, hadolint]
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@main
+
+      - name: 🐍 Set up Python "${{ matrix.python-version }}"
+        uses: actions/setup-python@v3
+        with:
+          python-version: "${{ matrix.python-version }}"
+        
+      - name: 📌 Load files from cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/virtualenvs
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pipenv-${{ hashFiles('Pipfile.lock') }}
+  
+      - name: 👷‍ Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+          pipenv install --deploy --dev
+
+      - name: Run pact tests
+        env:
+          GIT_COMMIT: "${{ github.sha }}"
+          GIT_BRANCH: "${{ github.ref_name }}"
+          PACT_BROKER_PUBLISH_VERIFICATION_RESULTS: true
+          PACT_BROKER_BASE_URL: "https://gotreasa.pactflow.io"
+          PACT_BROKER_TOKEN: "${{ secrets.PACT_BROKER_TOKEN }}"
+        run: make ci
+
+  test_and_coverage:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: 🐍 Set up Python "${{ matrix.python-version }}"
+      uses: actions/setup-python@v3
+      with:
+        python-version: "${{ matrix.python-version }}"
+
+    - name: 📌 Load files from cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-python-${{ matrix.python-version }}-pipenv-${{ hashFiles('Pipfile.lock') }}
+
+    - name: 👷‍ Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --deploy --dev
+
+    - name: 🤖 Tests - 🧪 Unit - 🔌 Integration - 👩🏻‍💻 E2E
+      run: |
+        pipenv run coverageDevOps
+
+    - name: 👷‍ Setup Sonar
+      uses: warchant/setup-sonar-scanner@master
+
+    - name: 🫣 Sonar Scanner
+      run: sonar-scanner
+        -Dsonar.login="${{ secrets.SONAR_TOKEN }}"
+
+    - name: Publish Test Report
+      if: always() # Forces this step to always run
+      uses: mikepenz/action-junit-report@v3
+      with:
+        report_paths: 'junit/test-result.xml'
+        require_tests: true
+        check_name: PyTest Results

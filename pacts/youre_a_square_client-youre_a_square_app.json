@@ -1,0 +1,45 @@
+{
+  "consumer": {
+    "name": "youre_a_square_client"
+  },
+  "provider": {
+    "name": "youre_a_square_app"
+  },
+  "interactions": [
+    {
+      "description": "a request to get the health of the service",
+      "providerState": "a running app",
+      "request": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+        },
+        "body": {
+        }
+      }
+    },
+    {
+      "description": "a request to get the dummy endpoint",
+      "providerState": "a running app",
+      "request": {
+        "method": "GET",
+        "path": "/1.0.0/dummy"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+        },
+        "body": {
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "2.0.0"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+version: "3.8"
+services:
+  api:
+    # --------------------------------------------------------------
+    # REMOTE IMAGE
+    # uncomment to pull from Docker Hub
+    # image: "undeadgrishnackh/dummy_app:latest"    # multi architecture ADO built
+    # stdin_open: true # docker run -i
+    # tty: true        # docker run -t
+    # --------------------------------------------------------------
+    # platform: linux/arm64
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    labels:
+      version: "1.0.0"
+      python.version: "3.9"
+      container.description: "Dummy App API Server with FastAPI"
+    container_name: "dummy_app"
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 10m
+      retries: 5
+      start_period: 10s
+
+  pact_verifier:
+    image: pactfoundation/pact-cli:latest
+    depends_on:
+      - api
+    environment:
+      - PACT_BROKER_BASE_URL
+      - PACT_BROKER_TOKEN
+      - PACT_BROKER_PUBLISH_VERIFICATION_RESULTS
+      - PACT_URL
+      - GIT_COMMIT
+      - GIT_BRANCH
+    command: >
+      verify
+      ${PACT_URL}
+      --provider-base-url http://api:8000
+      --provider youre_a_square_app
+      --provider-app-version ${GIT_COMMIT}
+      --provider-version-tag ${GIT_BRANCH}
+      --wait 10

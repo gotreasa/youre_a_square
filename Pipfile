@@ -1,0 +1,48 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+commitizen = "*"
+detect-secrets = "*"
+pact-python = "*"
+pre-commit = "*"
+pylint = "*"
+pytest = "*"
+pytest-bdd = "*"
+pytest-cov = "*"
+pytest-describe = "*"
+pytest-describe-it = "*"
+pytest-html = "*"
+pytest-mock = "~=3.6.1"
+pytest-pspec = "*"
+pytest-watch = "*"
+python-semantic-release = "*"
+
+[packages]
+fastapi = '*'
+requests = "*"
+uvicorn = '*'
+
+[requires]
+python_version = "3"
+
+[scripts]
+commit = "cz commit"
+coverage = "pytest tests/unit tests/integration tests/release tests/api --cache-clear"
+coverageDevOps = "pytest tests/unit tests/integration tests/release tests/api --junit-xml=junit/test-result.xml --cov-report=xml --cov-report=html --cache-clear"
+coverageHtml = "pytest tests/unit tests/integration tests/release tests/api --cov-report html"
+detectSecrets = "detect-secrets-hook --baseline .secrets.baseline"
+detectSecretsAudit = "detect-secrets audit .secrets.baseline"
+detectSecretsUpdate = "detect-secrets scan --baseline .secrets.baseline"
+installHooks = "pre-commit install --install-hooks -t commit-msg -t pre-push -t pre-commit"
+linterCheck = "pylint -f msvs modules"
+testApi = "pytest tests/api"
+testIntegration = "pytest tests/integration"
+testRelease = "pytest tests/release"
+tests = "pytest tests/unit tests/integration tests/release tests/api"
+testUnit = "pytest tests/unit"
+watchTestApi = "ptw tests/api"
+watchTestIntegration = "ptw tests/integration modules/"
+watchTestUnit= "ptw tests/unit modules/"
