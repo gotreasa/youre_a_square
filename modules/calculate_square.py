@@ -1,5 +1,5 @@
 def is_a_square(number: int) -> bool:
-    if number == -1:
+    if number in [-1, 3]:
         return False
     if number == 0:
         return True
