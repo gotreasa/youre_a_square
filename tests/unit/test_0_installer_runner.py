@@ -13,9 +13,13 @@ def describe_is_a_square():
         assert calculate_square.is_a_square(-1) == False
 
     def should_return_true_when_zero():
-        """🧪 should take -1 and return true"""
+        """🧪 should take 0 and return true"""
         assert calculate_square.is_a_square(0) == True
 
-    def should_return_false_when_negative_three():
+    def should_return_false_when_three():
         """🧪 should take 3 and return false"""
         assert calculate_square.is_a_square(3) == False
+
+    def should_return_true_when_four():
+        """🧪 should take 4 and return true"""
+        assert calculate_square.is_a_square(4) == True
