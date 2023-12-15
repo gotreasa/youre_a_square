@@ -23,3 +23,7 @@ def describe_is_a_square():
     def should_return_true_when_four():
         """🧪 should take 4 and return true"""
         assert calculate_square.is_a_square(4) == True
+
+    def should_return_true_when_twenty_five():
+        """🧪 should take 25 and return true"""
+        assert calculate_square.is_a_square(25) == True
