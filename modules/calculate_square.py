@@ -1,2 +1,2 @@
-def print_the_title():
-    print("😊 Welcome to Dummy Kata")
+def is_a_square(number: int):
+    raise ValueError("❗️ Input must be an integer")
